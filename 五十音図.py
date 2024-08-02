@@ -86,11 +86,20 @@ nomaji = ['a', 'i', 'u', 'e', 'o',
 #              'ジュ', 'じゅ', 'ゲ', 'ビュ', 'ヒョ', 'ひゅ', 'ぱ', 'ダ', 'にょ',
 #              'ヒャ', 'ティ', 'ミョ', 'チョ', 'ぴょ', 'フィ', 'ぴゃ', 'びゃ', 'ツォ',
 #              ]
-# checked = katakana
 checked = []
+# checked = hiragana
+counted = {}
 
 
 if __name__ == "__main__":
+    """
+    del        : 删除当前词汇
+    show       : 显示待考察词汇
+    checked    : 显示checked词汇
+    save       : 保存checked词汇到文本
+    progress   : 显示当前进度
+    counted    : 显示词汇计数
+    """
     # print(len(hiragana))
     # print(len(katakana))
     # print(len(nomaji))
@@ -110,18 +119,32 @@ if __name__ == "__main__":
             del dict[e]
     # print(len(dict.keys()))
 
+    def add2checked(e):
+        checked.append(e)
+        del dict[e]
+
     while True:
+        if len(dict.keys()) == 0:
+            input('All clear, congratulations!')
+            break
         quest = random.choice(list(dict.keys()))
         answer = dict[quest]
         print(Fore.LIGHTWHITE_EX + Style.BRIGHT + quest + Style.RESET_ALL)
         guess = input("の発音は:")
         if guess == 'del':
             if quest not in checked:
-                checked.append(quest)
-            del dict[quest]
-            print(quest + " was deleted.")
+                add2checked(quest)
+            print(quest + ": " + answer + " was deleted.")
         elif guess == 'show':
+            print(dict)
+        elif guess == 'checked':
             print(checked)
+        elif guess == 'counted':
+            print(counted)
+        elif guess == 'progress':
+            deleted = len(checked)
+            total = deleted + len(dict.keys())
+            print('当前进度: {0:.2f} %'.format(deleted/total*100))
         elif guess == 'save':
             with open('checked.txt', 'w', newline='', encoding='utf-8-sig') as file:
                 writer = csv.writer(file)
@@ -137,6 +160,14 @@ if __name__ == "__main__":
                   Fore.CYAN + answer +
                   Fore.WHITE + " です"
                   )
+            counted[quest] = 0  # 错误一次计数归零
         else:
-            print(Fore.GREEN + "right!")
+            print(Fore.GREEN + "right!")  # 正确三次以上不再考察
+            if quest not in counted:
+                counted[quest] = 1
+            else:
+                counted[quest] += 1
+            if counted[quest] >= 2:
+                add2checked(quest)
+                print(quest + ": " + answer + " was deleted.")
         print(Style.RESET_ALL)
