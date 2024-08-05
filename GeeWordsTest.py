@@ -86,49 +86,86 @@ if __name__ == "__main__":
         input(Fore.GREEN+'all words have been checked!'+Style.RESET_ALL)
 
     while True:
-        df = words_to_check.sample(n=1).iloc[0]
-        print(df['mean'])
+        try:
+            df = words_to_check.sample(n=1).iloc[0]
+            print(df['mean'])
 
-        new_word, replaced_letters = mask_word(df['word'])
+            new_word, replaced_letters = mask_word(df['word'])
 
-        print(new_word)
+            print(new_word)
 
-        guess = input('▶: ')
-        if guess.startswith(' '):
-            qurry = guess.replace(' ', '')
-            print(Fore.CYAN+'---------------------------------------------------------------------'+Style.RESET_ALL)
-            explain = collins[qurry]
-            if explain == '':
-                print('not find ' + Fore.CYAN + qurry + Style.RESET_ALL)
+            guess = input('▶: ')
+
+            if guess == 'save' or guess == '   ':
+
+                # 将未记忆行的check列的值设置为'☆'
+                x = words[~words['word'].isin(words_to_check['word'])]
+                words.loc[x.index, 'check'] = '☆'
+
+                # 找出words中mean为空的行并修复
+                empty_mean_rows = words[words['mean'].isnull()]
+                for index, row in empty_mean_rows.iterrows():
+                    word = row['word'].lower()
+                    en_ch_word = en_ch[en_ch['word'] == word]
+                    if not en_ch_word.empty:
+                        mean = en_ch_word['mean'].values[0]
+                        words.at[index, 'mean'] = mean
+                    else:
+                        print(
+                            "No mean found for word '{word}' in en_ch, remove it")
+                        # 删除该行
+                        words.drop(index, inplace=True)
+
+                words.sort_values(by='word', inplace=True)
+                words.dropna(subset=['word'], inplace=True)
+                words.drop_duplicates(subset=['word'], inplace=True)
+                words.to_csv(path_words, encoding='utf-8-sig', index=False)
+                print(Fore.CYAN + 'saved!'+Style.RESET_ALL)
+
+            elif guess == 'p' or guess == 'progress':
+                words_to_check_len = len(words_to_check)
+                words_len = len(words)
+                print(
+                    f"{words_to_check_len}/{words_len}: {((words_len-words_to_check_len)/words_len)*100.0}%")
+            elif guess.startswith(' '):
+                qurry = guess.replace(' ', '')
+                print(
+                    Fore.CYAN+'---------------------------------------------------------------------'+Style.RESET_ALL)
+                try:
+                    explain = collins[qurry]
+                    if explain == '':
+                        print('not find ' + Fore.CYAN +
+                              qurry + Style.RESET_ALL)
+                    else:
+                        print(explain)
+                except:
+                    print('not find ' + Fore.CYAN + qurry + Style.RESET_ALL)
+                print(
+                    Fore.CYAN+'---------------------------------------------------------------------'+Style.RESET_ALL)
+
+            elif is_prefix(guess):
+                list_word = words_to_check[words_to_check['word'].str.startswith(
+                    guess[:-1])]
+                print(list_word)
+
+            elif is_suffix(guess):
+                list_word = words_to_check[words_to_check['word'].str.endswith(
+                    guess[1:])]
+                print(list_word)
+
+            elif is_root(guess):
+                list_word = words_to_check[words_to_check['word'].str.contains(
+                    guess[1:-1])]
+                print(list_word)
+
+            elif guess == replaced_letters:
+                print(Fore.GREEN + 'right! ' +
+                      Style.RESET_ALL + df['word'] + ' : ', df['mean']+'\n')
+                words_to_check = words_to_check[words_to_check['word']
+                                                != df['word']]
             else:
-                print(explain)
-            print(Fore.CYAN+'---------------------------------------------------------------------'+Style.RESET_ALL)
+                print(Fore.RED + df['word'] +
+                      Style.RESET_ALL + ' : ', df['mean']+'\n')
 
-        elif guess == 'save':
-            x = words[~words['word'].isin(words_to_check['word'])]
-            words.loc[x.index, 'check'] = '☆'
-            words.sort_values(by='word', inplace=True)
-            words.dropna(subset=['word'], inplace=True)
-            words.to_csv(path_words, encoding='utf-8-sig', index=False)
-            print(Fore.CYAN + 'saved!'+Style.RESET_ALL)
-
-        elif is_prefix(guess):
-            list_word = words_to_check[words_to_check['word'].str.startswith(
-                guess[:-1])]
-            print(list_word)
-        elif is_suffix(guess):
-            list_word = words_to_check[words_to_check['word'].str.endswith(
-                guess[1:])]
-            print(list_word)
-        elif is_root(guess):
-            list_word = words_to_check[words_to_check['word'].str.contains(
-                guess[1:-1])]
-            print(list_word)
-        elif guess == replaced_letters:
-            print(Fore.GREEN + 'right! ' +
-                  Style.RESET_ALL + df['word'] + ' : ', df['mean']+'\n')
-            words_to_check = words_to_check[words_to_check['word']
-                                            != df['word']]
-        else:
-            print(Fore.RED + df['word'] +
-                  Style.RESET_ALL + ' : ', df['mean']+'\n')
+        except Exception as e:
+            print(e)
